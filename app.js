@@ -121,6 +121,9 @@ const ExportLogic = {
 // ==========================================
 // INSTANT REAL-TIME NOTIFICATION ENGINE
 // ==========================================
+// ==========================================
+// INSTANT REAL-TIME NOTIFICATION ENGINE
+// ==========================================
 const NotificationEngine = {
     channel: null,
     init: async () => {
@@ -139,18 +142,18 @@ const NotificationEngine = {
         // HOSPITAL NOTIFICATIONS (Listen for Instant Code Reds)
         if (role === 'hospital' || role === 'admin' || role === 'super_admin') {
             NotificationEngine.channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_tickets' }, payload => {
+                console.log("SOS RECEIVED:", payload); // Debugging
                 NotificationEngine.trigger(`🚨 EMERGENCY SOS`, `New request for ${payload.new.units} units of ${payload.new.blood_group} (${payload.new.urgency})`);
-                if(role === 'hospital') HospitalLogic.loadSOS(); // Auto-fetch
+                if(role === 'hospital') HospitalLogic.loadSOS(); // Auto-fetch instantly
             });
         }
 
         // DOCTOR NOTIFICATIONS (Listen for SOS Claim updates)
         if (role === 'doctor') {
             NotificationEngine.channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sos_tickets', filter: `doctor_id=eq.${activeUser.id}` }, payload => {
-                // Failsafe: if old payload is missing (Replica Identity issue), just check new status
                 if(payload.new.status === 'Claimed') {
                     NotificationEngine.trigger(`✅ SOS Claimed`, `Your request for ${payload.new.patient_name} was accepted by a Blood Bank!`);
-                    DoctorLogic.loadSOS(); // Auto-fetch
+                    DoctorLogic.loadSOS(); // Auto-fetch instantly
                 }
             });
         }
@@ -160,7 +163,7 @@ const NotificationEngine = {
             NotificationEngine.channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `surveyor_id=eq.${activeUser.id}` }, payload => {
                 if(payload.new.survey_status === 'Revisit Required') {
                     NotificationEngine.trigger(`📋 Audit Alert`, `Household ${payload.new.house_uid} flagged for Revisit.`);
-                    SurveyorLogic.loadRevisits(); // Auto-fetch
+                    SurveyorLogic.loadRevisits(); // Auto-fetch instantly
                 }
             });
         }
@@ -169,16 +172,22 @@ const NotificationEngine = {
         NotificationEngine.channel.subscribe((status) => {
             if (status === 'SUBSCRIBED') {
                 console.log('⚡ RaktaDhara Live Engine Connected & Listening');
+            } else {
+                console.log('Live Engine Status:', status);
             }
         });
     },
     trigger: (title, body) => {
-        // 1. Instant In-App Visual Toast
+        // 1. ALWAYS show Instant In-App Visual Toast (Guaranteed to work)
         UI.toast(`${title}: ${body}`, 'info');
         
-        // 2. OS-Level Desktop/Mobile Push Notification
-        if ("Notification" in window && Notification.permission === 'granted') {
-            new Notification(title, { body: body, icon: './favicon.ico' });
+        // 2. Safely attempt OS-Level Desktop/Mobile Push Notification
+        try {
+            if ("Notification" in window && Notification.permission === 'granted') {
+                new Notification(title, { body: body, icon: './favicon.ico' });
+            }
+        } catch(e) {
+            console.log("Native OS Push blocked, relying on In-App Toast.");
         }
     }
 };
