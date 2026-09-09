@@ -227,6 +227,9 @@ const SUPABASE_URL = 'https://pwayhjaubudecfbacjjb.supabase.co';
                 document.getElementById('sidebar').classList.remove('open');
                 document.getElementById('mobileOverlay').classList.remove('open');
                 if(tabId === 'view-admin-dash' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
+                if(tabId === 'view-geo-mgmt') {
+    GeoLogic.init();
+}
             }
         };
 
@@ -334,26 +337,118 @@ const SUPABASE_URL = 'https://pwayhjaubudecfbacjjb.supabase.co';
                     if(error) throw error; selectElement.className = `status-select ${newStatus === 'Completed' ? 'completed' : (newStatus === 'Revisit Required' ? 'revisit' : 'progress')}`; UI.toast(`Status updated successfully.`);
                 } catch(e) { UI.toast("Failed to update status in DB.", "error"); }
             },
-            loadAssignmentDropdowns: async () => {
-                try {
-                    const { data: s } = await supabaseClient.from('app_users').select('id, full_name, user_code').eq('role', 'surveyor');
-                    if(s) document.getElementById('assignSurveyorDrop').innerHTML = '<option value="">Select Surveyor Node</option>' + s.map(x => `<option value="${x.id}">${x.full_name} (${x.user_code})</option>`).join('');
-                    const { data: v } = await supabaseClient.from('geo_villages').select('id, village_name');
-                    if(v) document.getElementById('assignVillageDrop').innerHTML = '<option value="">Select Village Target</option>' + v.map(x => `<option value="${x.id}">${x.village_name}</option>`).join('');
-                } catch(e) {}
-            },
+            // Add these functions inside your existing AdminLogic object
+loadAssignmentDropdowns: async () => {
+    try {
+        // Load Surveyors
+        const { data: s } = await supabaseClient.from('app_users').select('id, full_name, user_code').eq('role', 'surveyor');
+        if(s) document.getElementById('assignSurveyorDrop').innerHTML = '<option value="">Select Surveyor Node</option>' + s.map(x => `<option value="${x.id}">${x.full_name} (${x.user_code})</option>`).join('');
+        
+        // Load Top-Level Districts for the Cascade
+        const { data: d } = await supabaseClient.from('geo_districts').select('id, name').order('name');
+        if(d) document.getElementById('assignDistDrop').innerHTML = '<option value="">Select District</option>' + d.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        
+        // Clear children
+        document.getElementById('assignBlockDrop').innerHTML = '<option value="">Select Block</option>';
+        document.getElementById('assignGPDrop').innerHTML = '<option value="">Select Gram Panchayat</option>';
+        document.getElementById('assignVillageDrop').innerHTML = '<option value="">Select Target Village</option>';
+    } catch(e) {}
+},
+
+loadBlocks: async (distId) => {
+    if(!distId) return;
+    try {
+        const { data } = await supabaseClient.from('geo_blocks').select('id, name').eq('district_id', distId).order('name');
+        document.getElementById('assignBlockDrop').innerHTML = '<option value="">Select Block</option>' + data.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        document.getElementById('assignGPDrop').innerHTML = '<option value="">Select Gram Panchayat</option>';
+        document.getElementById('assignVillageDrop').innerHTML = '<option value="">Select Target Village</option>';
+    } catch(e) {}
+},
+
+loadGPs: async (blockId) => {
+    if(!blockId) return;
+    try {
+        const { data } = await supabaseClient.from('geo_gps').select('id, name').eq('block_id', blockId).order('name');
+        document.getElementById('assignGPDrop').innerHTML = '<option value="">Select Gram Panchayat</option>' + data.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        document.getElementById('assignVillageDrop').innerHTML = '<option value="">Select Target Village</option>';
+    } catch(e) {}
+},
+
+loadVillages: async (gpId) => {
+    if(!gpId) return;
+    try {
+        const { data } = await supabaseClient.from('geo_villages').select('id, village_name').eq('gp_id', gpId).order('village_name');
+        document.getElementById('assignVillageDrop').innerHTML = '<option value="">Select Target Village</option>' + data.map(x => `<option value="${x.id}">${x.village_name}</option>`).join('');
+    } catch(e) {}
+},
             loadAssignmentsList: async () => {
-                try {
-                    const { data } = await supabaseClient.from('surveyor_village_assignments').select('id, app_users(full_name), geo_villages(village_name)');
-                    if(data && data.length > 0) {
-                        document.getElementById('assignmentTableBody').innerHTML = data.map(a => `<tr><td>${Array.isArray(a.app_users)?a.app_users[0]?.full_name:a.app_users?.full_name}</td><td>${Array.isArray(a.geo_villages)?a.geo_villages[0]?.village_name:a.geo_villages?.village_name}</td><td style="text-align:right;"><button class="btn btn-outline" style="border:none; padding:6px; color:var(--danger); display:inline-flex; width:auto;" onclick="AdminLogic.removeAssignment('${a.id}')"><i class="ph-bold ph-trash" style="font-size:16px;"></i></button></td></tr>`).join('');
-                    } else { document.getElementById('assignmentTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;">No vectors assigned.</td></tr>'; }
-                } catch(e) {}
-            },
-            removeAssignment: async (id) => {
-                if(!confirm("Sever assignment link?")) return;
-                try { const {error} = await supabaseClient.from('surveyor_village_assignments').delete().eq('id', id); if(error) throw error; UI.toast("Link severed"); AdminLogic.loadAssignmentsList(); } catch(e) {}
-            },
+        try {
+            // Fetch assignments with nested relationships to get the GP name
+            const { data } = await supabaseClient
+                .from('surveyor_village_assignments')
+                .select(`
+                    id, 
+                    app_users(full_name), 
+                    geo_villages(
+                        village_name,
+                        geo_gps(name)
+                    )
+                `);
+
+            if (data && data.length > 0) {
+                document.getElementById('assignmentTableBody').innerHTML = data.map(a => {
+                    // Extract Surveyor Name safely
+                    const surveyorName = Array.isArray(a.app_users) ? a.app_users[0]?.full_name : a.app_users?.full_name;
+                    
+                    // Extract Village & GP Name safely
+                    const villageData = Array.isArray(a.geo_villages) ? a.geo_villages[0] : a.geo_villages;
+                    const villageName = villageData?.village_name || 'Unknown Village';
+                    
+                    const gpData = Array.isArray(villageData?.geo_gps) ? villageData?.geo_gps[0] : villageData?.geo_gps;
+                    const gpName = gpData?.name || 'Unknown GP';
+                    
+                    return `
+                        <tr>
+                            <td style="font-weight:600;">${surveyorName}</td>
+                            <td>
+                                <strong style="color:var(--primary); font-size:14px;">${villageName}</strong>
+                                <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">GP: ${gpName}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <button class="btn btn-outline" style="border:none; padding:8px; color:var(--danger); display:inline-flex; width:auto; background:rgba(239,68,68,0.1); border-radius:8px;" onclick="AdminLogic.removeAssignment('${a.id}')" title="Sever Assignment Link">
+                                    <i class="ph-bold ph-trash" style="font-size:18px;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else { 
+                document.getElementById('assignmentTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center; padding:32px; color:var(--text-muted); font-weight:600;">No surveyor vectors currently assigned.</td></tr>'; 
+            }
+        } catch (e) {
+            console.error("Assignment List Sync Error:", e);
+            document.getElementById('assignmentTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--danger); font-weight:bold;">Database Error.</td></tr>'; 
+        }
+    },
+
+    removeAssignment: async (id) => {
+        if (!confirm("Sever assignment link? The surveyor will instantly lose access to this target sector.")) return;
+        
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i>'; // Loading state
+        
+        try { 
+            const { error } = await supabaseClient.from('surveyor_village_assignments').delete().eq('id', id); 
+            if (error) throw error; 
+            
+            UI.toast("Sector link severed successfully.", "success"); 
+            AdminLogic.loadAssignmentsList(); // Refresh the list automatically
+        } catch (e) {
+            btn.innerHTML = originalHtml;
+            UI.toast("Failed to sever link.", "error"); 
+        }
+    },
             createUser: async (e) => {
                 e.preventDefault();
                 try {
@@ -366,13 +461,126 @@ const SUPABASE_URL = 'https://pwayhjaubudecfbacjjb.supabase.co';
                 } catch(err) { UI.toast(err.message, 'error'); }
             },
             assignVillage: async (e) => {
-                e.preventDefault();
-                try {
-                    const { error } = await supabaseClient.from('surveyor_village_assignments').insert([{ surveyor_id: document.getElementById('assignSurveyorDrop').value, village_id: document.getElementById('assignVillageDrop').value }]);
-                    if(error) throw error; UI.toast("Sector Assigned."); AdminLogic.loadAssignmentsList();
-                } catch(err) { UI.toast("Assignment Failed.", 'error'); }
+        e.preventDefault();
+        
+        const surveyorId = document.getElementById('assignSurveyorDrop').value;
+        const villageId = document.getElementById('assignVillageDrop').value;
+        
+        if (!surveyorId || !villageId) {
+            return UI.toast("Please select both a Surveyor and a Target Village.", "warning");
+        }
+
+        try {
+            const { error } = await supabaseClient.from('surveyor_village_assignments').insert([{ 
+                surveyor_id: surveyorId, 
+                village_id: villageId 
+            }]);
+            
+            if (error) throw error; 
+            
+            UI.toast("Sector Successfully Assigned!", "success"); 
+            e.target.reset(); // Clears the form dropdowns
+            
+            // Instantly refresh the UI table
+            AdminLogic.loadAssignmentsList(); 
+            
+        } catch (err) { 
+            console.error("Assignment Error:", err);
+            
+            // Check if it's the UNIQUE constraint error (surveyor already has this village)
+            if (err.code === '23505') {
+                UI.toast("This surveyor is already assigned to this village.", "warning");
+            } else {
+                UI.toast("Assignment Failed: " + err.message, "error"); 
             }
+        }
+    }
         };
+        const GeoLogic = {
+    init: () => {
+        GeoLogic.loadTable('geo_districts', 'list-districts', 'name');
+        GeoLogic.loadTableWithParent('geo_blocks', 'list-blocks', 'name', 'district_id', 'geo_districts', 'selDistForBlock');
+        GeoLogic.loadTableWithParent('geo_gps', 'list-gps', 'name', 'block_id', 'geo_blocks', 'selBlockForGP');
+        GeoLogic.loadTableWithParent('geo_villages', 'list-villages', 'village_name', 'gp_id', 'geo_gps', 'selGPForVillage');
+    },
+
+    // Load simple table (Districts)
+    loadTable: async (table, containerId, nameField) => {
+        const { data } = await supabaseClient.from(table).select('*').order(nameField);
+        const container = document.getElementById(containerId);
+        if(!data || data.length === 0) return container.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">No records found.</div>';
+        
+        container.innerHTML = data.map(item => `
+            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #E2E8F0; font-size:13px; align-items:center;">
+                <strong>${item[nameField]}</strong>
+                <button class="btn btn-outline" style="border:none; padding:4px; color:var(--danger); width:auto;" onclick="GeoLogic.deleteEntity('${table}', '${item.id}')"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        `).join('');
+    },
+
+    // Load tables with Parent relationships (Blocks, GPs, Villages) and populate dropdowns
+    loadTableWithParent: async (table, containerId, nameField, parentIdField, parentTable, selectId) => {
+        // 1. Populate Dropdown for the Form
+        const { data: parents } = await supabaseClient.from(parentTable).select('*').order(parentTable === 'geo_villages' ? 'village_name' : 'name');
+        if(parents) {
+            document.getElementById(selectId).innerHTML = `<option value="">Select Parent...</option>` + parents.map(p => `<option value="${p.id}">${p.name || p.village_name}</option>`).join('');
+        }
+
+        // 2. Load the list UI
+        const { data } = await supabaseClient.from(table).select(`*, parent:${parentTable}(*)`).order(nameField);
+        const container = document.getElementById(containerId);
+        if(!data || data.length === 0) return container.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">No records found.</div>';
+
+        container.innerHTML = data.map(item => `
+            <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #E2E8F0; font-size:13px; align-items:center;">
+                <div><strong>${item[nameField]}</strong> <span style="font-size:10px; color:var(--text-muted); display:block;">Under: ${item.parent?.name || item.parent?.village_name || 'Unknown'}</span></div>
+                <button class="btn btn-outline" style="border:none; padding:4px; color:var(--danger); width:auto;" onclick="GeoLogic.deleteEntity('${table}', '${item.id}')"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        `).join('');
+    },
+
+    addEntity: async (e, table, fields, inputId) => {
+        e.preventDefault();
+        const payload = {};
+        payload[fields[0]] = document.getElementById(inputId).value;
+        try {
+            const { error } = await supabaseClient.from(table).insert([payload]);
+            if(error) throw error; UI.toast("Added successfully."); e.target.reset(); GeoLogic.init(); AdminLogic.loadAssignmentDropdowns();
+        } catch(err) { UI.toast("Error adding record.", "error"); }
+    },
+
+    addBlock: async (e) => {
+        e.preventDefault();
+        try {
+            const { error } = await supabaseClient.from('geo_blocks').insert([{ name: document.getElementById('blockName').value, district_id: document.getElementById('selDistForBlock').value }]);
+            if(error) throw error; UI.toast("Block added."); e.target.reset(); GeoLogic.init();
+        } catch(err) { UI.toast("Error", "error"); }
+    },
+
+    addGP: async (e) => {
+        e.preventDefault();
+        try {
+            const { error } = await supabaseClient.from('geo_gps').insert([{ name: document.getElementById('gpName').value, block_id: document.getElementById('selBlockForGP').value }]);
+            if(error) throw error; UI.toast("GP added."); e.target.reset(); GeoLogic.init();
+        } catch(err) { UI.toast("Error", "error"); }
+    },
+
+    addVillage: async (e) => {
+        e.preventDefault();
+        try {
+            const { error } = await supabaseClient.from('geo_villages').insert([{ village_name: document.getElementById('villName').value, gp_id: document.getElementById('selGPForVillage').value }]);
+            if(error) throw error; UI.toast("Village added."); e.target.reset(); GeoLogic.init();
+        } catch(err) { UI.toast("Error", "error"); }
+    },
+
+    deleteEntity: async (table, id) => {
+        if(!confirm("Warning: Deleting this will cascade and delete all connected geographic children. Proceed?")) return;
+        try {
+            const { error } = await supabaseClient.from(table).delete().eq('id', id);
+            if(error) throw error; UI.toast("Deleted."); GeoLogic.init(); AdminLogic.loadAssignmentDropdowns();
+        } catch(err) { UI.toast("Error deleting.", "error"); }
+    }
+};
 
         const HospitalLogic = {
             baseInv: null,
