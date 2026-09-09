@@ -154,20 +154,17 @@
 </head>
 <body>
 
-    <!-- 1. SECURE GATEWAY (POWERED BY INDIANWORKERS) -->
+    <!-- 1. SECURE GATEWAY -->
     <div id="intro-scene">
         <div class="bg-gradient"><div class="bg-orb orb1"></div><div class="bg-orb orb2"></div></div>
         <div class="auth-card">
             <div class="auth-logo"><i class="ph-bold ph-drop"></i></div>
             <h2 style="margin-bottom: 4px; font-size:28px;">RaktaDhara</h2>
             <p style="color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px;">Mapping Every Lifeline</p>
-            <button id="btnInstallApp" class="btn btn-outline" style="margin-top: 16px; border-color: #E2E8F0; color: var(--accent); display: none; background: rgba(255,255,255,0.5);">
-    <i class="ph-bold ph-download-simple" style="font-size: 18px; color: var(--primary);"></i> Download Mobile App
-</button>
             <form onsubmit="Auth.handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label">Network ID / User Code</label>
-                    <input type="text" id="authId" class="form-control" placeholder="e.g. MASTERADMIN" required style="text-transform: uppercase;">
+                    <input type="text" id="authId" class="form-control" placeholder="e.g. admin" required style="text-transform: uppercase;">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Security Key (Password)</label>
@@ -196,11 +193,9 @@
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-admin-dash', this)"><i class="ph-bold ph-squares-four"></i> <span>Grid Dashboard</span></div>
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-village-explorer', this)"><i class="ph-bold ph-database"></i> <span>Census Ledger</span></div>
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-user-mgmt', this)"><i class="ph-bold ph-users-three"></i> <span>Facility & Sector Mgmt</span></div>
-                <div class="nav-item role-admin" onclick="Portal.switchTab('view-geo-mgmt', this)">
-    <i class="ph-bold ph-map-trifold"></i> <span>Geography Master</span>
-</div>
+                <div class="nav-item role-admin" onclick="Portal.switchTab('view-geo-mgmt', this)"><i class="ph-bold ph-map-trifold"></i> <span>Geography Master</span></div>
                 
-                <!-- Facility Modules (Role Based + Admin God Mode) -->
+                <!-- Facility Modules -->
                 <div class="nav-section-title role-admin">Facility Terminals</div>
                 <div class="nav-item role-hospital role-admin" onclick="Portal.switchTab('view-hospital-dash', this); HospitalLogic.loadInventory(); HospitalLogic.loadBeds(); HospitalLogic.loadSOS();"><i class="ph-bold ph-thermometer" style="color:var(--medical)"></i> <span>Blood Inventory & Beds</span></div>
                 <div class="nav-item role-doctor role-admin" onclick="Portal.switchTab('view-doctor-dash', this); DoctorLogic.loadSOS();"><i class="ph-bold ph-stethoscope" style="color:var(--medical)"></i> <span>Clinical & SOS Desk</span></div>
@@ -227,7 +222,13 @@
                     <h2 style="font-size: 18px; color: var(--accent);" id="topbarTitle">Dashboard</h2>
                 </div>
                 <div style="display: flex; align-items: center; gap: 16px;">
-                    <button id="btnSyncPending" class="btn btn-outline" style="display:none; border-color:var(--warning); color:var(--warning); padding:8px 16px; font-size:11px;" onclick="OfflineSync.syncNow()"><i class="ph-bold ph-cloud-arrow-up"></i> Sync <span id="syncCount">0</span></button>
+                    <button id="btnGlobalRefresh" class="btn btn-outline" style="padding: 10px; width: auto; border-color:var(--medical); color:var(--medical);" onclick="Portal.refreshData()" title="Refresh Dashboard">
+        <i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i>
+    </button>
+    
+    <button id="btnSyncPending" class="btn btn-outline" style="display:none; border-color:var(--warning); color:var(--warning); padding:8px 16px; font-size:11px;" onclick="OfflineSync.syncNow()">
+        <i class="ph-bold ph-cloud-arrow-up"></i> Sync <span id="syncCount">0</span>
+    </button>
                     <div class="user-profile">
                         <div class="user-avatar" id="uiAvatar">U</div>
                         <div style="display: flex; flex-direction: column; padding-right: 8px;">
@@ -285,95 +286,77 @@
                         </div>
                         <div>
                             <div class="card" style="margin-bottom: 24px; padding:24px;">
-    <h3 style="margin-bottom: 16px; font-size:16px; color:var(--accent);">Sector Target Assignment</h3>
-    <form onsubmit="AdminLogic.assignVillage(event)">
-        <div class="grid-2" style="margin-bottom: 12px;">
-            <select id="assignSurveyorDrop" class="form-control" required><option value="">Select Surveyor Node</option></select>
-            <select id="assignDistDrop" class="form-control" required onchange="AdminLogic.loadBlocks(this.value)"><option value="">Select District</option></select>
-            <select id="assignBlockDrop" class="form-control" required onchange="AdminLogic.loadGPs(this.value)"><option value="">Select Block</option></select>
-            <select id="assignGPDrop" class="form-control" required onchange="AdminLogic.loadVillages(this.value)"><option value="">Select Gram Panchayat</option></select>
-            <select id="assignVillageDrop" class="form-control" required style="grid-column: 1 / -1;"><option value="">Select Target Village</option></select>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:auto; padding:0 32px; height: 48px;"><i class="ph-bold ph-link"></i> Link Surveyor to Village</button>
-    </form>
-</div>
-                            <div class="card" style="max-height: 400px; overflow-y: auto; padding: 0; border: 2px solid #E2E8F0; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-    <table class="hdc-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
-        <thead style="position: sticky; top: 0; z-index: 10; background: #F8FAFC; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
-            <tr>
-                <th style="padding: 16px 24px; width: 40%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
-                    <i class="ph-bold ph-user-focus" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Surveyor Node
-                </th>
-                <th style="padding: 16px 24px; width: 45%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
-                    <i class="ph-bold ph-map-pin-line" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Target Sector
-                </th>
-                <th style="padding: 16px 24px; width: 15%; text-align: right; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
-                    Action
-                </th>
-            </tr>
-        </thead>
-        <tbody id="assignmentTableBody">
-            <tr>
-                <td colspan="3" style="text-align:center; padding:40px; color:var(--text-muted); font-weight:600;">
-                    <i class="ph ph-spinner ph-spin" style="font-size:32px; color:var(--primary); margin-bottom:12px; display:block;"></i> 
-                    Synchronizing Vectors...
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+                                <h3 style="margin-bottom: 16px; font-size:16px; color:var(--accent);">Sector Target Assignment</h3>
+                                <form onsubmit="AdminLogic.assignVillage(event)">
+                                    <div class="grid-2" style="margin-bottom: 12px;">
+                                        <select id="assignSurveyorDrop" class="form-control" required><option value="">Select Surveyor Node</option></select>
+                                        <select id="assignDistDrop" class="form-control" required onchange="AdminLogic.loadBlocks(this.value)"><option value="">Select District</option></select>
+                                        <select id="assignBlockDrop" class="form-control" required onchange="AdminLogic.loadGPs(this.value)"><option value="">Select Block</option></select>
+                                        <select id="assignGPDrop" class="form-control" required onchange="AdminLogic.loadVillages(this.value)"><option value="">Select Gram Panchayat</option></select>
+                                        <select id="assignVillageDrop" class="form-control" required style="grid-column: 1 / -1;"><option value="">Select Target Village</option></select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" style="width:auto; padding:0 32px; height: 48px;"><i class="ph-bold ph-link"></i> Link Surveyor to Village</button>
+                                </form>
+                            </div>
+                            <div class="card" style="max-height: 400px; overflow-y: auto; padding: 0; border: 2px solid #E2E8F0; border-radius: 16px;">
+                                <table class="hdc-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                                    <thead style="position: sticky; top: 0; z-index: 10; background: #F8FAFC; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+                                        <tr>
+                                            <th style="padding: 16px 24px; width: 40%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;"><i class="ph-bold ph-user-focus" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Surveyor Node</th>
+                                            <th style="padding: 16px 24px; width: 45%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;"><i class="ph-bold ph-map-pin-line" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Target Sector</th>
+                                            <th style="padding: 16px 24px; width: 15%; text-align: right; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="assignmentTableBody">
+                                        <tr><td colspan="3" style="text-align:center; padding:40px; color:var(--text-muted); font-weight:600;"><i class="ph ph-spinner ph-spin" style="font-size:32px; color:var(--primary); margin-bottom:12px; display:block;"></i> Synchronizing Vectors...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
+
                 <!-- ================= GEO MANAGEMENT MODULE ================= -->
-<div id="view-geo-mgmt" class="section-view">
-    <h1 style="font-size: 28px; margin-bottom: 24px;">Geography Master Registry</h1>
-    
-    <div class="grid-2">
-        <!-- District Management -->
-        <div class="glass-card">
-            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">1. Districts</h3>
-            <form onsubmit="GeoLogic.addEntity(event, 'geo_districts', ['name'], 'distName')" style="display:flex; gap:8px; margin-bottom:16px;">
-                <input type="text" id="distName" class="form-control" placeholder="New District" required>
-                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
-            </form>
-            <div id="list-districts" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
-        </div>
-
-        <!-- Block Management -->
-        <div class="glass-card">
-            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">2. Blocks / Sub-Divisions</h3>
-            <form onsubmit="GeoLogic.addBlock(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                <select id="selDistForBlock" class="form-control" required style="flex:1;"><option value="">Select District</option></select>
-                <input type="text" id="blockName" class="form-control" placeholder="New Block Name" required style="flex:2;">
-                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
-            </form>
-            <div id="list-blocks" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
-        </div>
-
-        <!-- GP Management -->
-        <div class="glass-card">
-            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">3. Gram Panchayats</h3>
-            <form onsubmit="GeoLogic.addGP(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                <select id="selBlockForGP" class="form-control" required style="flex:1;"><option value="">Select Block</option></select>
-                <input type="text" id="gpName" class="form-control" placeholder="New GP Name" required style="flex:2;">
-                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
-            </form>
-            <div id="list-gps" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
-        </div>
-
-        <!-- Village Management -->
-        <div class="glass-card">
-            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">4. Villages / Mouzas</h3>
-            <form onsubmit="GeoLogic.addVillage(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
-                <select id="selGPForVillage" class="form-control" required style="flex:1;"><option value="">Select GP</option></select>
-                <input type="text" id="villName" class="form-control" placeholder="New Village Name" required style="flex:2;">
-                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
-            </form>
-            <div id="list-villages" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
-        </div>
-    </div>
-</div>
+                <div id="view-geo-mgmt" class="section-view">
+                    <h1 style="font-size: 28px; margin-bottom: 24px;">Geography Master Registry</h1>
+                    <div class="grid-2">
+                        <div class="glass-card">
+                            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">1. Districts</h3>
+                            <form onsubmit="GeoLogic.addEntity(event, 'geo_districts', ['name'], 'distName')" style="display:flex; gap:8px; margin-bottom:16px;">
+                                <input type="text" id="distName" class="form-control" placeholder="New District" required>
+                                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+                            </form>
+                            <div id="list-districts" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+                        </div>
+                        <div class="glass-card">
+                            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">2. Blocks / Sub-Divisions</h3>
+                            <form onsubmit="GeoLogic.addBlock(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                                <select id="selDistForBlock" class="form-control" required style="flex:1;"><option value="">Select District</option></select>
+                                <input type="text" id="blockName" class="form-control" placeholder="New Block Name" required style="flex:2;">
+                                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+                            </form>
+                            <div id="list-blocks" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+                        </div>
+                        <div class="glass-card">
+                            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">3. Gram Panchayats</h3>
+                            <form onsubmit="GeoLogic.addGP(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                                <select id="selBlockForGP" class="form-control" required style="flex:1;"><option value="">Select Block</option></select>
+                                <input type="text" id="gpName" class="form-control" placeholder="New GP Name" required style="flex:2;">
+                                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+                            </form>
+                            <div id="list-gps" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+                        </div>
+                        <div class="glass-card">
+                            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">4. Villages / Mouzas</h3>
+                            <form onsubmit="GeoLogic.addVillage(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                                <select id="selGPForVillage" class="form-control" required style="flex:1;"><option value="">Select GP</option></select>
+                                <input type="text" id="villName" class="form-control" placeholder="New Village Name" required style="flex:2;">
+                                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+                            </form>
+                            <div id="list-villages" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ================= UNIVERSAL: LIVE NETWORK SEARCH ================= -->
                 <div id="view-donors" class="section-view">
@@ -395,7 +378,6 @@
                 <!-- ================= HOSPITAL MODULE ================= -->
                 <div id="view-hospital-dash" class="section-view">
                     <h1 style="font-size: 28px; margin-bottom: 24px;">Facility Logistics & Blood Bank</h1>
-                    
                     <div class="glass-card" style="background: rgba(240,249,255,0.8); border: 1px solid #BAE6FD; padding: 20px; margin-bottom:24px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
                             <h3 style="color:var(--medical); font-size:16px;">Live Grid Component Extrapolator</h3>
@@ -407,9 +389,7 @@
                         </div>
                         <div class="grid-4" id="hospitalInvGrid"><div style="grid-column:1/-1; text-align:center; padding:40px;"><i class="ph ph-spinner ph-spin" style="font-size:32px; color:var(--medical);"></i> Computing Live Stocks...</div></div>
                     </div>
-
                     <div class="grid-2">
-                        <!-- Bed Management -->
                         <div class="card">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                                 <h3 style="font-size:16px; color:var(--accent);">Facility Bed Management</h3>
@@ -422,14 +402,11 @@
                                 </table>
                             </div>
                         </div>
-                        
-                        <!-- SOS Inbox -->
                         <div class="glass-card" style="border-top:4px solid var(--danger); background:rgba(255,255,255,0.9);">
                             <h3 style="font-size:16px; margin-bottom:16px; color:var(--danger);"><i class="ph-bold ph-siren"></i> Incoming Doctor SOS Tickets</h3>
                             <div id="hospSOSList" style="max-height:250px; overflow-y:auto; padding-right:8px;"><div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px; font-weight:600;">No active emergency tickets in grid.</div></div>
                         </div>
                     </div>
-
                     <div class="card" style="margin-top:24px;">
                         <h3 style="font-size:16px; margin-bottom:20px; color:var(--medical);">Log Family Replacement Donor</h3>
                         <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Log replacement donations provided by patient families. This safely triggers their statutory 90-day cooldown in the regional census.</p>
@@ -445,7 +422,6 @@
                 <div id="view-doctor-dash" class="section-view">
                     <h1 style="font-size: 28px; margin-bottom: 24px;">Clinical & SOS Dispatch Portal</h1>
                     <div class="grid-2">
-                        <!-- Patient History -->
                         <div class="card">
                             <h3 style="margin-bottom: 16px; color:var(--medical); font-size:16px;">Patient Lookup & Medical Audit</h3>
                             <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Query a citizen by mobile number to review their verified blood group, active cooldown periods, and adverse reaction history.</p>
@@ -455,8 +431,6 @@
                             </form>
                             <div id="docPatientResults"></div>
                         </div>
-                        
-                        <!-- SOS Broadcast -->
                         <div class="glass-card" style="border-top: 4px solid var(--danger); background:rgba(255,255,255,0.9);">
                             <h3 style="margin-bottom: 20px; color:var(--danger); font-size:16px;"><i class="ph-bold ph-siren"></i> Launch Emergency Requisition</h3>
                             <form onsubmit="DoctorLogic.raiseSOS(event)">
@@ -470,7 +444,6 @@
                             </form>
                         </div>
                     </div>
-                    
                     <h3 style="margin-bottom:16px; font-size:18px;">My Active Requisitions</h3>
                     <div id="docSOSList" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;"></div>
                 </div>
@@ -488,8 +461,6 @@
                             </form>
                             <div id="pathResults" style="margin-top: 24px;"></div>
                         </div>
-
-                        <!-- Deferral Control -->
                         <div class="glass-card" style="border: 1px solid var(--warning); background:rgba(255,255,255,0.9);">
                             <h3 style="margin-bottom: 16px; color: var(--warning); font-size:16px;"><i class="ph-bold ph-shield-warning"></i> Confidential Medical Deferral</h3>
                             <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">If TTI screening (HIV, HCV, Malaria) is positive, apply an encrypted shadow-ban. Surveyors/Camps will only see "Temporarily Ineligible" to protect privacy.</p>
@@ -511,16 +482,11 @@
                         <h1 style="font-size: 28px;">Camp Orchestrator</h1>
                         <button class="btn btn-camp" style="width:auto; padding:12px 24px; font-size:14px;" onclick="document.getElementById('modalCreateCamp').style.display='flex'"><i class="ph-bold ph-plus"></i> Schedule New Drive</button>
                     </div>
-
-                    <!-- Event Tabs -->
                     <div style="display:flex; gap:12px; margin-bottom:24px; border-bottom:2px solid #E2E8F0; padding-bottom:12px;">
                         <button class="btn btn-camp" id="tabCampLive" style="width:auto; padding:10px 24px; font-size:13px;" onclick="CampLogic.switchTab('Live')">Active Events</button>
                         <button class="btn btn-outline" id="tabCampPast" style="width:auto; padding:10px 24px; font-size:13px; border-color:#CBD5E1; color:var(--text-muted);" onclick="CampLogic.switchTab('Past')">Past Archives</button>
                     </div>
-
                     <div id="campEventList" class="grid-3" style="margin-bottom:24px;"></div>
-
-                    <!-- Active Event Workspace -->
                     <div id="activeCampWorkspace" style="display:none;" class="glass-card">
                         <div style="display:flex; justify-content:space-between; margin-bottom:24px; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:20px; align-items:center; flex-wrap:wrap; gap:16px;">
                             <div>
@@ -532,23 +498,17 @@
                                 <button class="btn btn-outline" style="width:auto; padding:10px 20px; border-color:var(--accent); color:var(--accent);" onclick="CampLogic.closeWorkspace()"><i class="ph-bold ph-x"></i> Close Workspace</button>
                             </div>
                         </div>
-
                         <div class="grid-2">
-                            <!-- Registered Lookup -->
                             <div class="card" style="box-shadow:none; border:2px solid #E2E8F0;">
                                 <h3 style="margin-bottom: 16px; color: var(--accent); font-size:18px;">Registered Walk-In Lookup</h3>
-                                <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Lookup citizens by Mobile Number, Name, or House ID. Registering a donation instantly initiates their 90-day cooldown.</p>
                                 <form onsubmit="CampLogic.searchFamily(event)" style="display:flex; gap:12px; margin-bottom:24px;">
                                     <input type="text" id="campSearchInput" class="form-control" required placeholder="Enter Mobile No, Full Name, or House ID (RD-XXXX)" style="flex:1; height:48px; font-size:14px;">
                                     <button type="submit" class="btn btn-camp" style="width:auto; padding:0 24px; font-size:14px;"><i class="ph-bold ph-magnifying-glass"></i></button>
                                 </form>
                                 <div id="campFamilyResults"></div>
                             </div>
-                            
-                            <!-- Unregistered Manual Walk-In -->
                             <div class="card" style="box-shadow:none; border:2px dashed var(--camp);">
                                 <h3 style="margin-bottom: 16px; color: var(--camp); font-size:18px;">Unregistered Walk-In (Manual)</h3>
-                                <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">If the donor is not surveyed, register them here. The Surveyor App will automatically sync these details when they scan the mobile number later.</p>
                                 <form onsubmit="CampLogic.logManualWalkIn(event)">
                                     <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="mCampName" class="form-control" required></div>
                                     <div class="grid-2" style="gap:12px;">
@@ -570,22 +530,28 @@
                         <div style="font-size: 80px; font-weight: 800; color: var(--primary); letter-spacing:-3px; line-height:1;" id="myHouseCount">0</div>
                     </div>
                     <div class="grid-2">
-                        <button class="btn btn-primary" style="height: 88px; font-size: 16px; border-radius:16px;" onclick="Portal.switchTab('view-survey-form', document.querySelector('.nav-item.role-surveyor:nth-child(2)'))"><i class="ph-bold ph-plus-circle" style="font-size: 28px;"></i> Start New Household</button>
+                        <button class="btn btn-primary" style="height: 88px; font-size: 16px; border-radius:16px;" onclick="SurveyorLogic.initForm(); Portal.switchTab('view-survey-form', document.querySelector('.nav-item.role-surveyor:nth-child(2)'))"><i class="ph-bold ph-plus-circle" style="font-size: 28px;"></i> Start New Household</button>
                         <button class="btn btn-outline" style="height: 88px; font-size: 16px; border-radius:16px; border-color: var(--warning); color: var(--warning); border-width:2px;" onclick="Portal.switchTab('view-revisits', document.querySelector('.nav-item.role-surveyor:nth-child(3)'))"><i class="ph-bold ph-clock-counter-clockwise" style="font-size: 28px;"></i> Check Audit Revisits</button>
                     </div>
                 </div>
 
                 <div id="view-survey-form" class="section-view">
-                    <h2 style="margin-bottom: 24px;">Household Survey Execution</h2>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                        <h2>Household Survey Execution</h2>
+                        <button class="btn btn-outline" style="width:auto; padding:8px 16px; font-size:12px;" onclick="SurveyorLogic.initForm()">Reset Form</button>
+                    </div>
                     <div class="glass-card" style="padding: 32px;">
                         <form onsubmit="SurveyorLogic.submitHousehold(event)" id="surveyForm">
+                            <!-- HIDDEN INPUTS FOR EDIT/REVISIT CAPABILITY -->
+                            <input type="hidden" id="hEditId">
+                            <input type="hidden" id="hEditUid">
+
                             <div style="border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 24px; margin-bottom: 24px;">
                                 <h3 style="color: var(--primary); font-size: 16px; margin-bottom: 16px; text-transform:uppercase; letter-spacing:1px;">1. Locality & Radar</h3>
                                 <div class="grid-2">
                                     <div class="form-group"><label class="form-label">Assigned Sector</label><select id="hVillage" class="form-control" required><option value="">Loading...</option></select></div>
                                     <div class="form-group"><label class="form-label">Para / Locality Name</label><input type="text" id="hLocality" class="form-control" required></div>
                                 </div>
-                                <!-- GPS completely hidden by default -->
                                 <div class="form-group" id="gpsContainer" style="display:none; margin-top: 16px; padding: 20px; background: #F0FDF4; border: 2px solid #34D399; border-radius: 16px; animation:fadeIn 0.3s; box-shadow:0 10px 20px rgba(16,185,129,0.1);">
                                     <label class="form-label" style="color: #065F46; font-size:12px;"><i class="ph-bold ph-crosshair"></i> O- Negative Radar Activated (GPS Mandatory)</label>
                                     <div style="display:flex; gap:12px; margin-top:12px;">
@@ -599,7 +565,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                                 <div>
                                     <h3 style="color: var(--primary); font-size: 16px; margin: 0; text-transform:uppercase; letter-spacing:1px;">2. Census Roster</h3>
-                                    <p style="font-size:11px; color:var(--text-muted); margin-top:4px;">Type a mobile number and click "Sync DB" to automatically fetch unregistered walk-in donors from past camps.</p>
+                                    <p style="font-size:11px; color:var(--text-muted); margin-top:4px;">Type a mobile number and click "Sync DB" to automatically fetch network updates.</p>
                                 </div>
                                 <button type="button" class="btn btn-outline" style="width:auto; padding:10px 20px; font-size:12px; border-width:2px;" onclick="SurveyorLogic.addMemberRow()"><i class="ph-bold ph-user-plus"></i> Add Relative</button>
                             </div>
@@ -654,6 +620,16 @@
         </div>
     </div>
 
+    <!-- Fetch Selector Modal (NEW) -->
+    <div id="modalFetch" class="modal-overlay">
+        <div class="modal-card">
+            <button class="remove-btn" onclick="document.getElementById('modalFetch').style.display='none'"><i class="ph-bold ph-x"></i></button>
+            <h3 style="margin-bottom: 8px; font-size:20px; color:var(--primary);">Multiple Profiles Found</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">This mobile number is linked to multiple citizens. Select the correct profile to sync.</p>
+            <div id="fetchModalList" style="max-height:300px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- QR Code Manifest Modal -->
     <div id="qrModal" class="modal-overlay">
         <div class="modal-card" style="text-align:center;">
@@ -667,8 +643,6 @@
     </div>
 
     <div id="toast" class="toast"></div>
-
-    <!-- JAVASCRIPT LOGIC ENGINE -->
 
     <script src="app.js"></script>
 </body>
