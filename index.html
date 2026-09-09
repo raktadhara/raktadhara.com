@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RaktaDhara | Powered by IndianWorkers</title>
+    
+    <!-- Dependencies & Vector Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600;700;800&family=Tiro+Bangla&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="manifest" href="./manifest.json">
+
+    <style>
+        :root {
+            --bg-main: #FFFFFF;
+            --bg-body: #F4F7FA;
+            --primary: #8B0000;
+            --primary-hover: #690000;
+            --accent: #0F172A;
+            --text-muted: #64748B;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --medical: #0ea5e9;
+            --camp: #EA580C;
+            --pathology: #9333EA;
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Poppins', sans-serif;
+            --font-bn: 'Tiro Bangla', serif;
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow-card: 0 10px 30px rgba(139, 0, 0, 0.08);
+            --shadow-red: 0 8px 25px rgba(139, 0, 0, 0.3);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-body); }
+        .lang-bn { font-family: var(--font-bn) !important; }
+        body { background-color: var(--bg-body); color: var(--accent); height: 100vh; overflow: hidden; display: flex; -webkit-font-smoothing: antialiased; }
+        h1, h2, h3, h4, h5 { font-family: var(--font-heading); color: var(--primary); font-weight: 700; letter-spacing: -0.5px; }
+
+        /* Login Gateway */
+        #intro-scene { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: #1a0000; transition: opacity 0.8s ease; }
+        .bg-gradient { position: absolute; inset: 0; background: radial-gradient(circle at center, #8B0000 0%, #1a0000 100%); overflow: hidden; }
+        .bg-orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; animation: orbFloat 25s infinite alternate ease-in-out; }
+        .orb1 { width: 55vw; height: 55vw; background: #DC2626; top: -15%; left: -15%; }
+        .orb2 { width: 50vw; height: 50vw; background: #F59E0B; bottom: -20%; right: -10%; animation-delay: -5s; opacity: 0.3;}
+        @keyframes orbFloat { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(15vw, 15vh) scale(1.1); } }
+        
+        .auth-card { position: relative; z-index: 10; background: rgba(255,255,255,0.92); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); width: 90%; max-width: 440px; padding: 48px 40px; border-radius: 28px; box-shadow: 0 30px 60px rgba(0,0,0,0.6); text-align: center; border-bottom: 6px solid var(--primary); animation: formDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); border-top: 1px solid rgba(255,255,255,0.4); border-left: 1px solid rgba(255,255,255,0.4); }
+        @keyframes formDrop { from { transform: translateY(-60px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .auth-logo { width: 88px; height: 88px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 24px; box-shadow: var(--shadow-red); }
+
+        /* Forms & Buttons */
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-label { display: block; font-size: 11px; font-weight: 800; margin-bottom: 8px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+        .form-control { width: 100%; padding: 14px 16px; background: #F8FAFC; border: 2px solid #E2E8F0; border-radius: 12px; font-size: 14px; color: var(--accent); outline: none; transition: var(--transition); font-weight: 500; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(139, 0, 0, 0.1); background: white; }
+        
+        .btn { width: 100%; padding: 14px 24px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(139, 0, 0, 0.4); background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); font-weight:800; }
+        .btn-outline:hover { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);}
+        .btn-camp { background: var(--camp); color: white; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);}
+        .btn-medical { background: var(--medical); color: white; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);}
+
+        .brand-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #E2E8F0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+        .brand-footer span { color: var(--primary); font-weight: 800; }
+
+        /* Workspace Grid & Sidebar */
+        #portal-view { display: none; width: 100vw; height: 100vh; opacity: 0; transition: opacity 0.6s; padding: 16px; gap: 16px; background: url('https://www.transparenttextures.com/patterns/cubes.png') var(--bg-body); }
+        .sidebar { width: 280px; display: flex; flex-direction: column; background: var(--primary); border-radius: 24px; box-shadow: var(--shadow-card); flex-shrink: 0; z-index: 100; position: relative; overflow: hidden;}
+        .sidebar::before { content:''; position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.3) 100%); pointer-events:none; }
+        .sidebar-header { padding: 32px 24px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); position:relative; z-index:2;}
+        .nav-menu { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 6px; position:relative; z-index:2;}
+        
+        .nav-item { padding: 14px 16px; border-radius: 14px; color: rgba(255,255,255,0.75); cursor: pointer; display: none; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; transition: var(--transition); border: 1px solid transparent;}
+        .nav-item:hover, .nav-item.active { background: white; color: var(--primary); font-weight: 800; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.8);}
+        .nav-section-title { display: none; padding: 16px 16px 6px; font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1.5px; }
+        .sidebar-footer { padding: 20px; text-align: center; font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; border-top: 1px solid rgba(255,255,255,0.1); letter-spacing: 1px; position:relative; z-index:2;}
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 16px; }
+        .topbar { height: 80px; border-radius: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid rgba(255,255,255,0.7); }
+        .page-content { flex: 1; overflow-y: auto; padding: 0 8px 40px 0; scroll-behavior: smooth; }
+        .user-profile { display: flex; align-items: center; gap: 12px; background: #F1F5F9; padding: 6px 16px 6px 6px; border-radius: 30px; border: 1px solid #E2E8F0; }
+        .user-avatar { width: 38px; height: 38px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; box-shadow: inset 0 -2px 5px rgba(0,0,0,0.2);}
+        
+        .section-view { display: none; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .section-view.active { display: block; }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Panels & Visual Components */
+        .card { background: white; padding: 28px; border-radius: 24px; margin-bottom: 24px; box-shadow: var(--shadow-card); border: 1px solid #E2E8F0; transition: transform 0.3s ease;}
+        .card:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(139,0,0,0.08); }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.7); border-radius: 24px; padding: 32px; margin-bottom: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.04); }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        
+        .badge { padding: 6px 14px; border-radius: 30px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display:inline-flex; align-items:center; gap:6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .badge-success { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0;}
+        .badge-danger { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA;}
+        .badge-warning { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;}
+        .badge-slate { background: #F1F5F9; color: var(--accent); border: 1px solid #E2E8F0;}
+        .badge-rare { background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%); color: #BE185D; border: 1px solid #FBCFE8; }
+
+        /* Tables */
+        .hdc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; text-align: left; }
+        .hdc-table th { padding: 16px; background: #F8FAFC; color: var(--text-muted); font-weight: 800; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; border-bottom: 2px solid #E2E8F0; position: sticky; top: 0; z-index: 2;}
+        .hdc-table td { padding: 16px; border-bottom: 1px solid #F1F5F9; color: var(--accent); font-weight: 500; }
+        .hdc-table tr:hover td { background: #F8FAFC; }
+        
+        .status-select { font-size: 11px; font-weight: 800; padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0; outline: none; cursor: pointer; text-transform: uppercase; }
+
+        #map { height: 400px; width: 100%; border-radius: 16px; z-index: 1; border: 1px solid #E2E8F0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);}
+
+        /* Surveyor Forms & Rows */
+        .member-card { background: #FFFFFF; border: 1px solid #E2E8F0; padding: 24px; border-radius: 18px; margin-bottom: 16px; position: relative; transition: var(--transition); box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .member-card:hover { border-color: var(--primary); box-shadow: 0 8px 25px rgba(139,0,0,0.08); }
+        .hof-badge { display: inline-flex; align-items:center; gap:6px; background: var(--primary); color: white; padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; box-shadow: var(--shadow-red); }
+        .remove-btn { position: absolute; top: -12px; right: -12px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; font-weight: bold; box-shadow: 0 4px 10px rgba(239,68,68,0.4); transition: transform 0.2s;}
+        .remove-btn:hover { transform: scale(1.1); }
+
+        /* Modals & Toasts */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.85); z-index: 99999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .modal-card { background: white; padding: 40px; border-radius: 28px; width: 90%; max-width: 550px; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.5); animation: formDrop 0.4s ease; }
+        
+        .toast { position: fixed; bottom: 32px; right: 32px; padding: 18px 28px; background: rgba(15,23,42,0.95); backdrop-filter: blur(10px); color: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 14px; transform: translateX(150%); transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1); z-index: 99999; font-size: 14px; font-weight: 600; border-left: 5px solid var(--success); }
+        .toast.show { transform: translateX(0); }
+        .toast.error { border-left-color: var(--danger); }
+        
+        .mobile-overlay { display: none; }
+        .mobile-menu-btn { display: none; background: none; border: none; font-size: 28px; color: var(--primary); cursor: pointer; }
+
+        @media (max-width: 992px) {
+            #portal-view { padding: 12px; gap: 12px; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .sidebar { position: fixed; top: 0; left: -320px; height: 100vh; transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; width: 280px; box-shadow: 20px 0 50px rgba(0,0,0,0.5);}
+            .sidebar.open { left: 0; }
+            .mobile-menu-btn { display: block; }
+            #topbarTitle { display: none; }
+            .hdc-table { display: block; overflow-x: auto; white-space: nowrap; }
+            .member-card .grid-2 { grid-template-columns: 1fr !important; }
+            .mobile-overlay.open { display: block; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 90; backdrop-filter: blur(4px);}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SECURE GATEWAY (POWERED BY INDIANWORKERS) -->
+    <div id="intro-scene">
+        <div class="bg-gradient"><div class="bg-orb orb1"></div><div class="bg-orb orb2"></div></div>
+        <div class="auth-card">
+            <div class="auth-logo"><i class="ph-bold ph-drop"></i></div>
+            <h2 style="margin-bottom: 4px; font-size:28px;">RaktaDhara</h2>
+            <p style="color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px;">Mapping Every Lifeline</p>
+            <button id="btnInstallApp" class="btn btn-outline" style="margin-top: 16px; border-color: #E2E8F0; color: var(--accent); display: none; background: rgba(255,255,255,0.5);">
+    <i class="ph-bold ph-download-simple" style="font-size: 18px; color: var(--primary);"></i> Download Mobile App
+</button>
+            <form onsubmit="Auth.handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Network ID / User Code</label>
+                    <input type="text" id="authId" class="form-control" placeholder="e.g. MASTERADMIN" required style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Security Key (Password)</label>
+                    <input type="password" id="authPass" class="form-control" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btnLogin" style="margin-top: 24px; height:50px; font-size:14px;">Establish Connection <i class="ph-bold ph-sign-in"></i></button>
+            </form>
+            <div class="brand-footer">Powered by <span>IndianWorkers</span></div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APPLICATION WORKSPACE -->
+    <div id="portal-view">
+        <div class="mobile-overlay" id="mobileOverlay" onclick="UI.toggleSidebar()"></div>
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2 style="color:white; font-size:26px;">RaktaDhara</h2>
+                <div style="font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.7); margin-top: 6px; text-transform: uppercase; font-weight:800;" id="roleSubtitle">Portal</div>
+            </div>
+            
+            <nav class="nav-menu">
+                <!-- Admin Base -->
+                <div class="nav-section-title role-admin">Command Network</div>
+                <div class="nav-item role-admin" onclick="Portal.switchTab('view-admin-dash', this)"><i class="ph-bold ph-squares-four"></i> <span>Grid Dashboard</span></div>
+                <div class="nav-item role-admin" onclick="Portal.switchTab('view-village-explorer', this)"><i class="ph-bold ph-database"></i> <span>Census Ledger</span></div>
+                <div class="nav-item role-admin" onclick="Portal.switchTab('view-user-mgmt', this)"><i class="ph-bold ph-users-three"></i> <span>Facility & Sector Mgmt</span></div>
+                
+                <!-- Facility Modules (Role Based + Admin God Mode) -->
+                <div class="nav-section-title role-admin">Facility Terminals</div>
+                <div class="nav-item role-hospital role-admin" onclick="Portal.switchTab('view-hospital-dash', this); HospitalLogic.loadInventory(); HospitalLogic.loadBeds(); HospitalLogic.loadSOS();"><i class="ph-bold ph-thermometer" style="color:var(--medical)"></i> <span>Blood Inventory & Beds</span></div>
+                <div class="nav-item role-doctor role-admin" onclick="Portal.switchTab('view-doctor-dash', this); DoctorLogic.loadSOS();"><i class="ph-bold ph-stethoscope" style="color:var(--medical)"></i> <span>Clinical & SOS Desk</span></div>
+                <div class="nav-item role-pathology role-admin" onclick="Portal.switchTab('view-pathology-dash', this)"><i class="ph-bold ph-microscope" style="color:var(--pathology)"></i> <span>Pathology Certification</span></div>
+                <div class="nav-item role-camp role-admin" onclick="Portal.switchTab('view-camp-dash', this); CampLogic.loadCamps();"><i class="ph-bold ph-tent" style="color:var(--camp)"></i> <span>Camp Orchestrator</span></div>
+
+                <!-- Universal Intelligence -->
+                <div class="nav-section-title role-admin role-hospital role-doctor role-camp">Intelligence</div>
+                <div class="nav-item role-admin role-hospital role-doctor role-camp" onclick="Portal.switchTab('view-donors', this)"><i class="ph-bold ph-radar"></i> <span>Live Network Search</span></div>
+
+                <!-- Surveyor Tools -->
+                <div class="nav-item role-surveyor" onclick="Portal.switchTab('view-surveyor-dash', this)"><i class="ph-bold ph-chart-line-up"></i> <span>Field Metrics</span></div>
+                <div class="nav-item role-surveyor" onclick="Portal.switchTab('view-survey-form', this)"><i class="ph-bold ph-house-line"></i> <span>Household Survey</span></div>
+                <div class="nav-item role-surveyor" onclick="Portal.switchTab('view-revisits', this)"><i class="ph-bold ph-clock-counter-clockwise"></i> <span>Audit Revisits</span></div>
+            </nav>
+            <div class="sidebar-footer">Powered by <strong style="color:white;">IndianWorkers</strong></div>
+        </aside>
+
+        <!-- MAIN VIEW PORT -->
+        <main class="main-content">
+            <header class="topbar">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="mobile-menu-btn" onclick="UI.toggleSidebar()"><i class="ph-bold ph-list"></i></button>
+                    <h2 style="font-size: 18px; color: var(--accent);" id="topbarTitle">Dashboard</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button id="btnSyncPending" class="btn btn-outline" style="display:none; border-color:var(--warning); color:var(--warning); padding:8px 16px; font-size:11px;" onclick="OfflineSync.syncNow()"><i class="ph-bold ph-cloud-arrow-up"></i> Sync <span id="syncCount">0</span></button>
+                    <div class="user-profile">
+                        <div class="user-avatar" id="uiAvatar">U</div>
+                        <div style="display: flex; flex-direction: column; padding-right: 8px;">
+                            <span style="font-size: 13px; font-weight: 800; color: var(--accent);" id="uiName">User</span>
+                            <span style="font-size: 9px; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;" id="uiRoleLabel">Role</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" style="padding: 10px; width: auto; border-color:var(--danger); color:var(--danger);" onclick="Auth.logout()"><i class="ph-bold ph-power"></i></button>
+                </div>
+            </header>
+
+            <div class="page-content">
+                
+                <!-- ================= ADMIN MODULE ================= -->
+                <div id="view-admin-dash" class="section-view">
+                    <h1 style="font-size: 28px; margin-bottom: 24px;">Global Command Grid</h1>
+                    <div class="grid-4" style="margin-bottom: 24px;">
+                        <div class="glass-card" style="text-align: center; border-top: 4px solid var(--primary); padding:24px; margin:0;"><h3 id="statVillages" style="font-size:36px;">0</h3><div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Villages Secured</div></div>
+                        <div class="glass-card" style="text-align: center; border-top: 4px solid var(--primary); padding:24px; margin:0;"><h3 id="statHouses" style="font-size:36px;">0</h3><div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Households Logged</div></div>
+                        <div class="glass-card" style="text-align: center; border-top: 4px solid var(--accent); padding:24px; margin:0;"><h3 id="statCitizens" style="font-size:36px;">0</h3><div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Citizens Processed</div></div>
+                        <div class="glass-card" style="text-align: center; border-top: 4px solid var(--success); padding:24px; margin:0;"><h3 id="statDonors" style="font-size:36px; color:var(--success);">0</h3><div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Eligible Reserve</div></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card" style="padding:20px;"><h3 style="margin-bottom: 16px; font-size: 16px;"><i class="ph-fill ph-map-pin"></i> Live GIS Matrix</h3><div id="map"></div></div>
+                        <div class="card" style="padding:20px;"><h3 style="margin-bottom: 16px; font-size: 16px;"><i class="ph-fill ph-users-three"></i> Field Activity Matrix</h3><div id="adminLeaderboard"></div></div>
+                    </div>
+                </div>
+
+                <div id="view-village-explorer" class="section-view">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 24px; align-items:center; flex-wrap:wrap; gap:16px;">
+                        <h2>Master Census Ledger</h2>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn btn-outline" style="width:auto; padding:10px 20px;" onclick="ExportLogic.downloadCSV()"><i class="ph-bold ph-file-csv"></i> CSV Dataset</button>
+                            <button class="btn btn-primary" style="width:auto; padding:10px 20px;" onclick="ExportLogic.downloadPDF()"><i class="ph-bold ph-file-pdf"></i> Generate PDF Record</button>
+                        </div>
+                    </div>
+                    <div id="dbExplorerContainer"><div style="text-align: center; padding: 60px;"><i class="ph ph-spinner ph-spin" style="font-size: 40px; color:var(--primary);"></i><p style="margin-top:16px; color:var(--text-muted); font-weight:600;">Decrypting Regional Ledger...</p></div></div>
+                </div>
+
+                <div id="view-user-mgmt" class="section-view">
+                    <h2 style="margin-bottom: 24px;">Facility & Sector Management</h2>
+                    <div class="grid-2">
+                        <div class="glass-card">
+                            <h3 style="margin-bottom: 20px; color: var(--primary); font-size:16px;">Provision New Node</h3>
+                            <form onsubmit="AdminLogic.createUser(event)">
+                                <div class="form-group"><label class="form-label">Node Class (Role)</label><select id="uRole" class="form-control" required><option value="surveyor">Field Surveyor</option><option value="doctor">Medical Doctor</option><option value="hospital">Blood Bank / Hospital</option><option value="pathologist">Pathologist</option><option value="camp">Camp Organizer</option></select></div>
+                                <div class="form-group"><label class="form-label">Facility / Officer Name</label><input type="text" id="uName" class="form-control" required></div>
+                                <div class="grid-2" style="gap:16px;">
+                                    <div class="form-group"><label class="form-label">Contact / Telecom</label><input type="tel" id="uMobile" class="form-control" required></div>
+                                    <div class="form-group"><label class="form-label">Login Identifier (Code)</label><input type="text" id="uCode" class="form-control" style="text-transform:uppercase;" required></div>
+                                </div>
+                                <div class="form-group"><label class="form-label">Temporary Cipher (Password)</label><input type="password" id="uPass" class="form-control" required></div>
+                                <button type="submit" class="btn btn-primary" style="height:50px;">Deploy Node Account</button>
+                            </form>
+                        </div>
+                        <div>
+                            <div class="card" style="margin-bottom: 24px; padding:24px;">
+                                <h3 style="margin-bottom: 16px; font-size:16px; color:var(--accent);">Sector Target Assignment</h3>
+                                <form onsubmit="AdminLogic.assignVillage(event)" style="display:flex; gap:12px;">
+                                    <select id="assignSurveyorDrop" class="form-control" required style="flex:1;"><option value="">Select Surveyor Node</option></select>
+                                    <select id="assignVillageDrop" class="form-control" required style="flex:1;"><option value="">Select Village Target</option></select>
+                                    <button type="submit" class="btn btn-primary" style="width:auto; padding:0 24px;"><i class="ph-bold ph-link"></i> Link</button>
+                                </form>
+                            </div>
+                            <div class="card" style="max-height:350px; overflow-y:auto; padding:0; box-shadow:none;">
+                                <table class="hdc-table">
+                                    <thead><tr><th>Surveyor Name</th><th>Assigned Target Area</th><th>Action</th></tr></thead>
+                                    <tbody id="assignmentTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= UNIVERSAL: LIVE NETWORK SEARCH ================= -->
+                <div id="view-donors" class="section-view">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+                        <h2 style="margin:0;">Live Network Search</h2>
+                        <button class="btn btn-success" style="width:auto; display:none;" id="btnWhatsAppBroadcast" onclick="SharedLogic.broadcastWhatsApp()"><i class="ph-bold ph-whatsapp-logo"></i> Broadcast Emergency Alert</button>
+                    </div>
+                    <div class="glass-card" style="background: rgba(254,226,226,0.4); border-color: #FECACA;">
+                        <form onsubmit="SharedLogic.searchDonors(event)">
+                            <div style="display: flex; gap: 16px; align-items:flex-end;">
+                                <div style="flex: 1;"><label class="form-label">Blood Group Target</label><select id="searchBg" class="form-control" style="background:white; border-color:#FCA5A5; font-size:16px; font-weight:bold;"><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="O+">O+</option><option value="O-">O-</option><option value="AB+">AB+</option><option value="AB-">AB-</option></select></div>
+                                <button type="submit" class="btn btn-primary" style="height: 52px; width: auto; padding:0 32px; font-size:15px;"><i class="ph-bold ph-radar"></i> Scan Grid</button>
+                            </div>
+                        </form>
+                        <div id="donorResults" style="margin-top: 24px;"></div>
+                    </div>
+                </div>
+
+                <!-- ================= HOSPITAL MODULE ================= -->
+                <div id="view-hospital-dash" class="section-view">
+                    <h1 style="font-size: 28px; margin-bottom: 24px;">Facility Logistics & Blood Bank</h1>
+                    
+                    <div class="glass-card" style="background: rgba(240,249,255,0.8); border: 1px solid #BAE6FD; padding: 20px; margin-bottom:24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                            <h3 style="color:var(--medical); font-size:16px;">Live Grid Component Extrapolator</h3>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-medical" id="btnInvWB" style="width:auto; padding:8px 16px;" onclick="HospitalLogic.renderInv('WB')">Whole Blood</button>
+                                <button class="btn btn-outline" id="btnInvPRBC" style="width:auto; padding:8px 16px; border-color:var(--medical); color:var(--medical);" onclick="HospitalLogic.renderInv('PRBC')">PRBC</button>
+                                <button class="btn btn-outline" id="btnInvPLT" style="width:auto; padding:8px 16px; border-color:var(--medical); color:var(--medical);" onclick="HospitalLogic.renderInv('PLT')">Platelets</button>
+                            </div>
+                        </div>
+                        <div class="grid-4" id="hospitalInvGrid"><div style="grid-column:1/-1; text-align:center; padding:40px;"><i class="ph ph-spinner ph-spin" style="font-size:32px; color:var(--medical);"></i> Computing Live Stocks...</div></div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Bed Management -->
+                        <div class="card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                                <h3 style="font-size:16px; color:var(--accent);">Facility Bed Management</h3>
+                                <button class="btn btn-outline btn-small" style="width:auto; padding:6px 12px; font-size:11px;" onclick="document.getElementById('modalAddBed').style.display='flex'"><i class="ph-bold ph-plus"></i> Add Bed</button>
+                            </div>
+                            <div style="max-height:250px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px;">
+                                <table class="hdc-table">
+                                    <thead><tr><th>Ward - Bed</th><th>Status</th><th>Blood Req.</th><th>Action</th></tr></thead>
+                                    <tbody id="hospBedsList"><tr><td colspan="4" style="text-align:center;">Loading beds...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- SOS Inbox -->
+                        <div class="glass-card" style="border-top:4px solid var(--danger); background:rgba(255,255,255,0.9);">
+                            <h3 style="font-size:16px; margin-bottom:16px; color:var(--danger);"><i class="ph-bold ph-siren"></i> Incoming Doctor SOS Tickets</h3>
+                            <div id="hospSOSList" style="max-height:250px; overflow-y:auto; padding-right:8px;"><div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px; font-weight:600;">No active emergency tickets in grid.</div></div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:24px;">
+                        <h3 style="font-size:16px; margin-bottom:20px; color:var(--medical);">Log Family Replacement Donor</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Log replacement donations provided by patient families. This safely triggers their statutory 90-day cooldown in the regional census.</p>
+                        <form onsubmit="HospitalLogic.logReplacement(event)" style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <input type="text" id="hospRepMobile" class="form-control" required placeholder="Mobile Number or RD-XXXXXX" style="flex:1; min-width:200px;">
+                            <input type="text" id="hospRepBag" class="form-control" required placeholder="Bag Barcode (e.g., WB-001)" style="flex:1; min-width:200px;">
+                            <button type="submit" class="btn btn-medical" style="width:auto; padding:0 24px;"><i class="ph-bold ph-arrows-left-right"></i> Register Sequence</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ================= DOCTOR MODULE ================= -->
+                <div id="view-doctor-dash" class="section-view">
+                    <h1 style="font-size: 28px; margin-bottom: 24px;">Clinical & SOS Dispatch Portal</h1>
+                    <div class="grid-2">
+                        <!-- Patient History -->
+                        <div class="card">
+                            <h3 style="margin-bottom: 16px; color:var(--medical); font-size:16px;">Patient Lookup & Medical Audit</h3>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Query a citizen by mobile number to review their verified blood group, active cooldown periods, and adverse reaction history.</p>
+                            <form onsubmit="DoctorLogic.searchPatient(event)" style="display:flex; gap:12px; margin-bottom:20px;">
+                                <input type="tel" id="docMobile" class="form-control" placeholder="Patient Mobile Number" required>
+                                <button type="submit" class="btn btn-medical" style="width:auto; padding:0 24px;"><i class="ph-bold ph-magnifying-glass" style="font-size:20px;"></i></button>
+                            </form>
+                            <div id="docPatientResults"></div>
+                        </div>
+                        
+                        <!-- SOS Broadcast -->
+                        <div class="glass-card" style="border-top: 4px solid var(--danger); background:rgba(255,255,255,0.9);">
+                            <h3 style="margin-bottom: 20px; color:var(--danger); font-size:16px;"><i class="ph-bold ph-siren"></i> Launch Emergency Requisition</h3>
+                            <form onsubmit="DoctorLogic.raiseSOS(event)">
+                                <div class="form-group"><label class="form-label">Patient Identifier / Bed No.</label><input type="text" id="sosPat" class="form-control" required></div>
+                                <div class="grid-3" style="gap:16px; margin-bottom:20px;">
+                                    <div><label class="form-label">Group Needed</label><select id="sosBg" class="form-control" required><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="O+">O+</option><option value="O-">O-</option><option value="AB+">AB+</option><option value="AB-">AB-</option></select></div>
+                                    <div><label class="form-label">Units</label><input type="number" id="sosUnits" class="form-control" required min="1" value="1"></div>
+                                    <div><label class="form-label">Clinical Urgency</label><select id="sosUrg" class="form-control" required><option value="Trauma / Accident">Trauma / Accident</option><option value="Maternity Emergency">Maternity / PPH</option><option value="Planned Surgery">Planned Surgery</option></select></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="background:var(--danger); border:none; height:48px; font-size:14px;"><i class="ph-bold ph-broadcast"></i> Broadcast to Blood Banks</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-bottom:16px; font-size:18px;">My Active Requisitions</h3>
+                    <div id="docSOSList" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;"></div>
+                </div>
+
+                <!-- ================= PATHOLOGY MODULE ================= -->
+                <div id="view-pathology-dash" class="section-view">
+                    <h2 style="margin-bottom: 24px;">Pathology Certification Desk</h2>
+                    <div class="grid-2">
+                        <div class="card" style="border-top: 4px solid var(--pathology);">
+                            <h3 style="margin-bottom: 16px; color: var(--pathology); font-size:16px;">Verify Blood Phenotype</h3>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Upgrade a citizen's self-declared survey record to official status. This enables Digital Blood Card generation.</p>
+                            <form onsubmit="PathologyLogic.searchCitizen(event)" style="display:flex; gap:12px;">
+                                <input type="tel" id="pathMobile" class="form-control" placeholder="Citizen Mobile Number" required>
+                                <button type="submit" class="btn btn-primary" style="background:var(--pathology); border:none; width:auto; padding:0 24px;">Lookup</button>
+                            </form>
+                            <div id="pathResults" style="margin-top: 24px;"></div>
+                        </div>
+
+                        <!-- Deferral Control -->
+                        <div class="glass-card" style="border: 1px solid var(--warning); background:rgba(255,255,255,0.9);">
+                            <h3 style="margin-bottom: 16px; color: var(--warning); font-size:16px;"><i class="ph-bold ph-shield-warning"></i> Confidential Medical Deferral</h3>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">If TTI screening (HIV, HCV, Malaria) is positive, apply an encrypted shadow-ban. Surveyors/Camps will only see "Temporarily Ineligible" to protect privacy.</p>
+                            <form onsubmit="PathologyLogic.applyDeferral(event)">
+                                <div class="form-group"><label class="form-label">Citizen Mobile / UID</label><input type="text" id="defId" class="form-control" required></div>
+                                <div class="grid-2" style="gap:16px;">
+                                    <div class="form-group"><label class="form-label">Deferral Timeline</label><select id="defType" class="form-control" required><option value="180">6 Months (Temporary)</option><option value="365">12 Months (Extended)</option><option value="9999">Permanent (Shadow Ban)</option></select></div>
+                                    <div class="form-group"><label class="form-label">Private ICD/Reason Code</label><select id="defReason" class="form-control" required><option value="Low Hb">Low Hemoglobin</option><option value="TTI Reactive">TTI Reactive</option><option value="Other Clinical">Other Clinical Issue</option></select></div>
+                                </div>
+                                <button type="submit" class="btn btn-outline" style="border-color:var(--warning); color:var(--warning); height:48px; margin-top:8px;"><i class="ph-bold ph-lock-key"></i> Lock Record in Database</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= CAMP ORGANIZER MODULE ================= -->
+                <div id="view-camp-dash" class="section-view">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap:wrap; gap:16px;">
+                        <h1 style="font-size: 28px;">Camp Orchestrator</h1>
+                        <button class="btn btn-camp" style="width:auto; padding:12px 24px; font-size:14px;" onclick="document.getElementById('modalCreateCamp').style.display='flex'"><i class="ph-bold ph-plus"></i> Schedule New Drive</button>
+                    </div>
+
+                    <!-- Event Tabs -->
+                    <div style="display:flex; gap:12px; margin-bottom:24px; border-bottom:2px solid #E2E8F0; padding-bottom:12px;">
+                        <button class="btn btn-camp" id="tabCampLive" style="width:auto; padding:10px 24px; font-size:13px;" onclick="CampLogic.switchTab('Live')">Active Events</button>
+                        <button class="btn btn-outline" id="tabCampPast" style="width:auto; padding:10px 24px; font-size:13px; border-color:#CBD5E1; color:var(--text-muted);" onclick="CampLogic.switchTab('Past')">Past Archives</button>
+                    </div>
+
+                    <div id="campEventList" class="grid-3" style="margin-bottom:24px;"></div>
+
+                    <!-- Active Event Workspace -->
+                    <div id="activeCampWorkspace" style="display:none;" class="glass-card">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:24px; border-bottom:1px solid rgba(0,0,0,0.1); padding-bottom:20px; align-items:center; flex-wrap:wrap; gap:16px;">
+                            <div>
+                                <h2 id="cwTitle" style="color:var(--camp); font-size:24px; margin-bottom:4px; font-weight:800;">Camp Name</h2>
+                                <p style="font-size:13px; color:var(--text-muted); font-weight:600;"><i class="ph-bold ph-calendar"></i> <span id="cwDate">Date</span> &nbsp;|&nbsp; <i class="ph-bold ph-bank"></i> <span id="cwBank">Bank</span></p>
+                            </div>
+                            <div style="display:flex; gap:12px;">
+                                <button class="btn btn-outline" style="width:auto; padding:10px 20px; border-color:var(--danger); color:var(--danger);" onclick="CampLogic.printManifest()"><i class="ph-bold ph-file-pdf"></i> Handover Manifest</button>
+                                <button class="btn btn-outline" style="width:auto; padding:10px 20px; border-color:var(--accent); color:var(--accent);" onclick="CampLogic.closeWorkspace()"><i class="ph-bold ph-x"></i> Close Workspace</button>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <!-- Registered Lookup -->
+                            <div class="card" style="box-shadow:none; border:2px solid #E2E8F0;">
+                                <h3 style="margin-bottom: 16px; color: var(--accent); font-size:18px;">Registered Walk-In Lookup</h3>
+                                <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Lookup citizens by Mobile Number, Name, or House ID. Registering a donation instantly initiates their 90-day cooldown.</p>
+                                <form onsubmit="CampLogic.searchFamily(event)" style="display:flex; gap:12px; margin-bottom:24px;">
+                                    <input type="text" id="campSearchInput" class="form-control" required placeholder="Enter Mobile No, Full Name, or House ID (RD-XXXX)" style="flex:1; height:48px; font-size:14px;">
+                                    <button type="submit" class="btn btn-camp" style="width:auto; padding:0 24px; font-size:14px;"><i class="ph-bold ph-magnifying-glass"></i></button>
+                                </form>
+                                <div id="campFamilyResults"></div>
+                            </div>
+                            
+                            <!-- Unregistered Manual Walk-In -->
+                            <div class="card" style="box-shadow:none; border:2px dashed var(--camp);">
+                                <h3 style="margin-bottom: 16px; color: var(--camp); font-size:18px;">Unregistered Walk-In (Manual)</h3>
+                                <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">If the donor is not surveyed, register them here. The Surveyor App will automatically sync these details when they scan the mobile number later.</p>
+                                <form onsubmit="CampLogic.logManualWalkIn(event)">
+                                    <div class="form-group"><label class="form-label">Full Name</label><input type="text" id="mCampName" class="form-control" required></div>
+                                    <div class="grid-2" style="gap:12px;">
+                                        <div class="form-group"><label class="form-label">Mobile</label><input type="tel" id="mCampMobile" class="form-control" required></div>
+                                        <div class="form-group"><label class="form-label">Blood Group</label><select id="mCampBg" class="form-control" required><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="O+">O+</option><option value="O-">O-</option><option value="AB+">AB+</option><option value="AB-">AB-</option></select></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-outline" style="border-color:var(--camp); color:var(--camp); height:48px; margin-top:8px;">Log Donation & Setup Sync</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= SURVEYOR MODULE ================= -->
+                <div id="view-surveyor-dash" class="section-view">
+                    <h1 style="font-size: 28px; margin-bottom: 24px;">My Field Metrics</h1>
+                    <div class="glass-card" style="border-top: 4px solid var(--primary); text-align: center; padding: 48px;">
+                        <h3 style="margin-bottom: 12px; color:var(--accent);">Households Synchronized</h3>
+                        <div style="font-size: 80px; font-weight: 800; color: var(--primary); letter-spacing:-3px; line-height:1;" id="myHouseCount">0</div>
+                    </div>
+                    <div class="grid-2">
+                        <button class="btn btn-primary" style="height: 88px; font-size: 16px; border-radius:16px;" onclick="Portal.switchTab('view-survey-form', document.querySelector('.nav-item.role-surveyor:nth-child(2)'))"><i class="ph-bold ph-plus-circle" style="font-size: 28px;"></i> Start New Household</button>
+                        <button class="btn btn-outline" style="height: 88px; font-size: 16px; border-radius:16px; border-color: var(--warning); color: var(--warning); border-width:2px;" onclick="Portal.switchTab('view-revisits', document.querySelector('.nav-item.role-surveyor:nth-child(3)'))"><i class="ph-bold ph-clock-counter-clockwise" style="font-size: 28px;"></i> Check Audit Revisits</button>
+                    </div>
+                </div>
+
+                <div id="view-survey-form" class="section-view">
+                    <h2 style="margin-bottom: 24px;">Household Survey Execution</h2>
+                    <div class="glass-card" style="padding: 32px;">
+                        <form onsubmit="SurveyorLogic.submitHousehold(event)" id="surveyForm">
+                            <div style="border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 24px; margin-bottom: 24px;">
+                                <h3 style="color: var(--primary); font-size: 16px; margin-bottom: 16px; text-transform:uppercase; letter-spacing:1px;">1. Locality & Radar</h3>
+                                <div class="grid-2">
+                                    <div class="form-group"><label class="form-label">Assigned Sector</label><select id="hVillage" class="form-control" required><option value="">Loading...</option></select></div>
+                                    <div class="form-group"><label class="form-label">Para / Locality Name</label><input type="text" id="hLocality" class="form-control" required></div>
+                                </div>
+                                <!-- GPS completely hidden by default -->
+                                <div class="form-group" id="gpsContainer" style="display:none; margin-top: 16px; padding: 20px; background: #F0FDF4; border: 2px solid #34D399; border-radius: 16px; animation:fadeIn 0.3s; box-shadow:0 10px 20px rgba(16,185,129,0.1);">
+                                    <label class="form-label" style="color: #065F46; font-size:12px;"><i class="ph-bold ph-crosshair"></i> O- Negative Radar Activated (GPS Mandatory)</label>
+                                    <div style="display:flex; gap:12px; margin-top:12px;">
+                                        <input type="text" class="form-control" id="hGps" placeholder="Press target button to lock coordinates ->" readonly style="background:white; border-color:#A7F3D0; font-weight:800; color:#065F46;">
+                                        <button type="button" class="btn btn-success" style="width:auto; padding:0 28px;" onclick="SurveyorLogic.getLocation()" id="btnGps"><i class="ph-bold ph-crosshair" style="font-size:24px;"></i></button>
+                                    </div>
+                                    <input type="hidden" id="hLat"><input type="hidden" id="hLng">
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <div>
+                                    <h3 style="color: var(--primary); font-size: 16px; margin: 0; text-transform:uppercase; letter-spacing:1px;">2. Census Roster</h3>
+                                    <p style="font-size:11px; color:var(--text-muted); margin-top:4px;">Type a mobile number and click "Sync DB" to automatically fetch unregistered walk-in donors from past camps.</p>
+                                </div>
+                                <button type="button" class="btn btn-outline" style="width:auto; padding:10px 20px; font-size:12px; border-width:2px;" onclick="SurveyorLogic.addMemberRow()"><i class="ph-bold ph-user-plus"></i> Add Relative</button>
+                            </div>
+                            
+                            <div id="membersContainer"></div>
+                            
+                            <button type="submit" class="btn btn-primary" id="btnSubmitSurvey" style="margin-top: 36px; height: 60px; font-size:16px; border-radius:16px;">Save & Synchronize Household <i class="ph-bold ph-cloud-arrow-up" style="font-size:24px;"></i></button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="view-revisits" class="section-view">
+                    <h2 style="margin-bottom: 24px;">Audit & Revisits</h2>
+                    <div id="revisitContainer"><div style="text-align: center; padding: 60px;"><i class="ph ph-spinner ph-spin" style="font-size: 40px; color:var(--warning);"></i></div></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Add Bed Modal -->
+    <div id="modalAddBed" class="modal-overlay">
+        <div class="modal-card">
+            <button class="remove-btn" onclick="document.getElementById('modalAddBed').style.display='none'"><i class="ph-bold ph-x"></i></button>
+            <h3 style="margin-bottom: 24px; color:var(--medical); font-size:22px;">Register New Facility Bed</h3>
+            <form onsubmit="HospitalLogic.addBed(event)">
+                <div class="form-group"><label class="form-label">Ward / Wing Name</label><input type="text" id="bedWard" class="form-control" required placeholder="e.g. ICU Wing A"></div>
+                <div class="form-group"><label class="form-label">Bed Number / Identifier</label><input type="text" id="bedNo" class="form-control" required placeholder="e.g. Bed 402"></div>
+                <div class="form-group"><label class="form-label">Current Status</label><select id="bedStatus" class="form-control"><option value="Available">Available</option><option value="Occupied">Occupied</option><option value="Maintenance">Maintenance</option></select></div>
+                <div class="form-group"><label class="form-label">Blood Requisition Note (If Occupied)</label><input type="text" id="bedBlood" class="form-control" placeholder="e.g. Pending 2 Units O-"></div>
+                <button type="submit" class="btn btn-medical" style="height:52px; margin-top:12px;">Save Bed Allocation</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Camp Modal -->
+    <div id="modalCreateCamp" class="modal-overlay">
+        <div class="modal-card">
+            <button class="remove-btn" onclick="document.getElementById('modalCreateCamp').style.display='none'"><i class="ph-bold ph-x"></i></button>
+            <h3 style="margin-bottom: 24px; color:var(--camp); font-size:24px;">Initialize New Event</h3>
+            <form onsubmit="CampLogic.createCamp(event)">
+                <div class="form-group"><label class="form-label">Camp Title</label><input type="text" id="cTitle" class="form-control" required placeholder="e.g. Keshpur Mega Drive"></div>
+                <div class="grid-2">
+                    <div class="form-group"><label class="form-label">Date</label><input type="date" id="cDate" class="form-control" required></div>
+                    <div class="form-group"><label class="form-label">Target Units</label><input type="number" id="cGoal" class="form-control" required value="100"></div>
+                </div>
+                <div class="form-group"><label class="form-label">Venue Landmark</label><input type="text" id="cVenue" class="form-control" required></div>
+                <div class="form-group"><label class="form-label">Partner Blood Bank</label><input type="text" id="cBank" class="form-control" required placeholder="e.g. MMC BB"></div>
+                <button type="submit" class="btn btn-camp" style="height:52px; margin-top:12px; font-size:15px;">Schedule Camp Drive</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR Code Manifest Modal -->
+    <div id="qrModal" class="modal-overlay">
+        <div class="modal-card" style="text-align:center;">
+            <button class="remove-btn" onclick="document.getElementById('qrModal').style.display='none'"><i class="ph-bold ph-x"></i></button>
+            <h3 style="margin-bottom: 8px; font-size:28px;">Census Complete</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 28px; font-weight:600;">Generate Physical Door Sticker</p>
+            <img id="qrImage" src="" alt="QR" style="margin: 0 auto; display: block; border: 4px solid var(--primary); border-radius: 16px; padding: 16px; width: 200px; height: 200px; box-shadow:0 15px 35px rgba(139,0,0,0.15);">
+            <p style="font-size: 28px; font-family: monospace; font-weight: 800; margin-top: 24px; color: var(--primary);" id="qrText">RD-XXX</p>
+            <button class="btn btn-primary" style="margin-top: 28px; height:52px; font-size:15px;" onclick="window.print()"><i class="ph-bold ph-printer"></i> Print Sticker Label</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- JAVASCRIPT LOGIC ENGINE -->
+    <script src="app.js"></script>
+</body>
+</html>

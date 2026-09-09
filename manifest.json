@@ -1,0 +1,16 @@
+{
+  "name": "RaktaDhara",
+  "short_name": "RaktaDhara",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#8B0000",
+  "theme_color": "#8B0000",
+  "icons": [
+    {
+      "src": "20260909_114306.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
