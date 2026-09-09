@@ -1,49 +1,33 @@
-const CACHE_NAME = 'raktadhara-pwa-v1';
-
-const ASSETS_TO_CACHE = [
-    './',
-    './index.html',
-    './manifest.json'
-];
+const CACHE_NAME = 'raktadhara-v1';
 
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); 
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
-    );
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) return caches.delete(cache);
-                })
-            );
-        })
-    );
-    self.clients.claim();
+    event.waitUntil(clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
-    // Ignore Supabase database calls so we don't cache old data
-    if (event.request.url.includes('supabase.co')) return; 
+// This enables background push notifications if the app is minimized
+self.addEventListener('push', function(event) {
+    if (event.data) {
+        const data = event.data.json();
+        const options = {
+            body: data.body,
+            icon: '20260909_114306.png',
+            badge: '20260909_114306.png',
+            vibrate: [100, 50, 100],
+            data: { url: data.url }
+        };
+        event.waitUntil(
+            self.registration.showNotification(data.title, options)
+        );
+    }
+});
 
-    event.respondWith(
-        fetch(event.request)
-            .then((networkResponse) => {
-                if (event.request.method === 'GET' && networkResponse.status === 200) {
-                    const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-                }
-                return networkResponse;
-            })
-            .catch(() => {
-                return caches.match(event.request).then((cachedResponse) => {
-                    if (cachedResponse) return cachedResponse;
-                    if (event.request.mode === 'navigate') return caches.match('./index.html');
-                });
-            })
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow('/')
     );
 });
