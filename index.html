@@ -196,6 +196,9 @@
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-admin-dash', this)"><i class="ph-bold ph-squares-four"></i> <span>Grid Dashboard</span></div>
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-village-explorer', this)"><i class="ph-bold ph-database"></i> <span>Census Ledger</span></div>
                 <div class="nav-item role-admin" onclick="Portal.switchTab('view-user-mgmt', this)"><i class="ph-bold ph-users-three"></i> <span>Facility & Sector Mgmt</span></div>
+                <div class="nav-item role-admin" onclick="Portal.switchTab('view-geo-mgmt', this)">
+    <i class="ph-bold ph-map-trifold"></i> <span>Geography Master</span>
+</div>
                 
                 <!-- Facility Modules (Role Based + Admin God Mode) -->
                 <div class="nav-section-title role-admin">Facility Terminals</div>
@@ -282,22 +285,95 @@
                         </div>
                         <div>
                             <div class="card" style="margin-bottom: 24px; padding:24px;">
-                                <h3 style="margin-bottom: 16px; font-size:16px; color:var(--accent);">Sector Target Assignment</h3>
-                                <form onsubmit="AdminLogic.assignVillage(event)" style="display:flex; gap:12px;">
-                                    <select id="assignSurveyorDrop" class="form-control" required style="flex:1;"><option value="">Select Surveyor Node</option></select>
-                                    <select id="assignVillageDrop" class="form-control" required style="flex:1;"><option value="">Select Village Target</option></select>
-                                    <button type="submit" class="btn btn-primary" style="width:auto; padding:0 24px;"><i class="ph-bold ph-link"></i> Link</button>
-                                </form>
-                            </div>
-                            <div class="card" style="max-height:350px; overflow-y:auto; padding:0; box-shadow:none;">
-                                <table class="hdc-table">
-                                    <thead><tr><th>Surveyor Name</th><th>Assigned Target Area</th><th>Action</th></tr></thead>
-                                    <tbody id="assignmentTableBody"></tbody>
-                                </table>
-                            </div>
+    <h3 style="margin-bottom: 16px; font-size:16px; color:var(--accent);">Sector Target Assignment</h3>
+    <form onsubmit="AdminLogic.assignVillage(event)">
+        <div class="grid-2" style="margin-bottom: 12px;">
+            <select id="assignSurveyorDrop" class="form-control" required><option value="">Select Surveyor Node</option></select>
+            <select id="assignDistDrop" class="form-control" required onchange="AdminLogic.loadBlocks(this.value)"><option value="">Select District</option></select>
+            <select id="assignBlockDrop" class="form-control" required onchange="AdminLogic.loadGPs(this.value)"><option value="">Select Block</option></select>
+            <select id="assignGPDrop" class="form-control" required onchange="AdminLogic.loadVillages(this.value)"><option value="">Select Gram Panchayat</option></select>
+            <select id="assignVillageDrop" class="form-control" required style="grid-column: 1 / -1;"><option value="">Select Target Village</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:auto; padding:0 32px; height: 48px;"><i class="ph-bold ph-link"></i> Link Surveyor to Village</button>
+    </form>
+</div>
+                            <div class="card" style="max-height: 400px; overflow-y: auto; padding: 0; border: 2px solid #E2E8F0; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+    <table class="hdc-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+        <thead style="position: sticky; top: 0; z-index: 10; background: #F8FAFC; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+            <tr>
+                <th style="padding: 16px 24px; width: 40%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
+                    <i class="ph-bold ph-user-focus" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Surveyor Node
+                </th>
+                <th style="padding: 16px 24px; width: 45%; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
+                    <i class="ph-bold ph-map-pin-line" style="font-size:14px; margin-right:6px; color:var(--primary);"></i> Target Sector
+                </th>
+                <th style="padding: 16px 24px; width: 15%; text-align: right; color: var(--accent); font-weight: 800; border-bottom: 2px solid #E2E8F0;">
+                    Action
+                </th>
+            </tr>
+        </thead>
+        <tbody id="assignmentTableBody">
+            <tr>
+                <td colspan="3" style="text-align:center; padding:40px; color:var(--text-muted); font-weight:600;">
+                    <i class="ph ph-spinner ph-spin" style="font-size:32px; color:var(--primary); margin-bottom:12px; display:block;"></i> 
+                    Synchronizing Vectors...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
                         </div>
                     </div>
                 </div>
+                <!-- ================= GEO MANAGEMENT MODULE ================= -->
+<div id="view-geo-mgmt" class="section-view">
+    <h1 style="font-size: 28px; margin-bottom: 24px;">Geography Master Registry</h1>
+    
+    <div class="grid-2">
+        <!-- District Management -->
+        <div class="glass-card">
+            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">1. Districts</h3>
+            <form onsubmit="GeoLogic.addEntity(event, 'geo_districts', ['name'], 'distName')" style="display:flex; gap:8px; margin-bottom:16px;">
+                <input type="text" id="distName" class="form-control" placeholder="New District" required>
+                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+            </form>
+            <div id="list-districts" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+        </div>
+
+        <!-- Block Management -->
+        <div class="glass-card">
+            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">2. Blocks / Sub-Divisions</h3>
+            <form onsubmit="GeoLogic.addBlock(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                <select id="selDistForBlock" class="form-control" required style="flex:1;"><option value="">Select District</option></select>
+                <input type="text" id="blockName" class="form-control" placeholder="New Block Name" required style="flex:2;">
+                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+            </form>
+            <div id="list-blocks" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+        </div>
+
+        <!-- GP Management -->
+        <div class="glass-card">
+            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">3. Gram Panchayats</h3>
+            <form onsubmit="GeoLogic.addGP(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                <select id="selBlockForGP" class="form-control" required style="flex:1;"><option value="">Select Block</option></select>
+                <input type="text" id="gpName" class="form-control" placeholder="New GP Name" required style="flex:2;">
+                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+            </form>
+            <div id="list-gps" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+        </div>
+
+        <!-- Village Management -->
+        <div class="glass-card">
+            <h3 style="margin-bottom: 16px; color:var(--primary); font-size:16px;">4. Villages / Mouzas</h3>
+            <form onsubmit="GeoLogic.addVillage(event)" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+                <select id="selGPForVillage" class="form-control" required style="flex:1;"><option value="">Select GP</option></select>
+                <input type="text" id="villName" class="form-control" placeholder="New Village Name" required style="flex:2;">
+                <button type="submit" class="btn btn-primary" style="width:auto;"><i class="ph-bold ph-plus"></i></button>
+            </form>
+            <div id="list-villages" style="max-height:200px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:12px; padding:8px; background:white;"></div>
+        </div>
+    </div>
+</div>
 
                 <!-- ================= UNIVERSAL: LIVE NETWORK SEARCH ================= -->
                 <div id="view-donors" class="section-view">
@@ -593,6 +669,7 @@
     <div id="toast" class="toast"></div>
 
     <!-- JAVASCRIPT LOGIC ENGINE -->
+
     <script src="app.js"></script>
 </body>
 </html>
