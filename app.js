@@ -119,54 +119,66 @@ const ExportLogic = {
 };
 
 // ==========================================
-// REAL-TIME NOTIFICATION ENGINE
+// INSTANT REAL-TIME NOTIFICATION ENGINE
 // ==========================================
 const NotificationEngine = {
+    channel: null,
     init: async () => {
         if(!activeUser) return;
         
-        // Request Browser Notification Permission
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            await Notification.requestPermission();
+        // 1. Request Browser Permissions Securely
+        if ("Notification" in window && Notification.permission === "default") {
+            try { await Notification.requestPermission(); } catch(e) { console.log("Push blocked by browser."); }
         }
 
         const role = activeUser.role;
-        const channel = supabaseClient.channel('custom-all-channel');
+        
+        // 2. Open Dedicated Live Channel
+        NotificationEngine.channel = supabaseClient.channel('live-system-updates');
 
-        // HOSPITAL NOTIFICATIONS (Listen for new Code Reds)
+        // HOSPITAL NOTIFICATIONS (Listen for Instant Code Reds)
         if (role === 'hospital' || role === 'admin' || role === 'super_admin') {
-            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_tickets' }, payload => {
+            NotificationEngine.channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_tickets' }, payload => {
                 NotificationEngine.trigger(`🚨 EMERGENCY SOS`, `New request for ${payload.new.units} units of ${payload.new.blood_group} (${payload.new.urgency})`);
-                if(role === 'hospital') HospitalLogic.loadSOS();
+                if(role === 'hospital') HospitalLogic.loadSOS(); // Auto-fetch
             });
         }
 
         // DOCTOR NOTIFICATIONS (Listen for SOS Claim updates)
         if (role === 'doctor') {
-            channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sos_tickets', filter: `doctor_id=eq.${activeUser.id}` }, payload => {
-                if(payload.new.status === 'Claimed' && payload.old.status !== 'Claimed') {
-                    NotificationEngine.trigger(`✅ SOS Claimed`, `Your request for ${payload.new.patient_name} was accepted by a Blood Bank.`);
-                    DoctorLogic.loadSOS();
+            NotificationEngine.channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sos_tickets', filter: `doctor_id=eq.${activeUser.id}` }, payload => {
+                // Failsafe: if old payload is missing (Replica Identity issue), just check new status
+                if(payload.new.status === 'Claimed') {
+                    NotificationEngine.trigger(`✅ SOS Claimed`, `Your request for ${payload.new.patient_name} was accepted by a Blood Bank!`);
+                    DoctorLogic.loadSOS(); // Auto-fetch
                 }
             });
         }
 
         // SURVEYOR NOTIFICATIONS (Listen for Audit/Revisits)
         if (role === 'surveyor') {
-            channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `surveyor_id=eq.${activeUser.id}` }, payload => {
-                if(payload.new.survey_status === 'Revisit Required' && payload.old.survey_status !== 'Revisit Required') {
+            NotificationEngine.channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `surveyor_id=eq.${activeUser.id}` }, payload => {
+                if(payload.new.survey_status === 'Revisit Required') {
                     NotificationEngine.trigger(`📋 Audit Alert`, `Household ${payload.new.house_uid} flagged for Revisit.`);
-                    SurveyorLogic.loadRevisits();
+                    SurveyorLogic.loadRevisits(); // Auto-fetch
                 }
             });
         }
 
-        channel.subscribe();
+        // 3. Connect and Monitor Status
+        NotificationEngine.channel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('⚡ RaktaDhara Live Engine Connected & Listening');
+            }
+        });
     },
     trigger: (title, body) => {
+        // 1. Instant In-App Visual Toast
         UI.toast(`${title}: ${body}`, 'info');
-        if (Notification.permission === 'granted') {
-            new Notification(title, { body: body });
+        
+        // 2. OS-Level Desktop/Mobile Push Notification
+        if ("Notification" in window && Notification.permission === 'granted') {
+            new Notification(title, { body: body, icon: './favicon.ico' });
         }
     }
 };
@@ -178,6 +190,11 @@ const Auth = {
         const idMobile = document.getElementById('authId').value.trim();
         const pass = document.getElementById('authPass').value;
         btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Authenticating...'; btn.disabled = true;
+
+        // Force browser to ask for notification permission on button click (bypasses silent blocks)
+        if ("Notification" in window && Notification.permission === "default") {
+            await Notification.requestPermission();
+        }
 
         try {
             let loginSuccess = false; let userData = null;
@@ -197,8 +214,6 @@ const Auth = {
     executeLogin: (userObj) => {
         if(!userObj) return;
         activeUser = userObj;
-        
-        // UPGRADE: Uses localStorage so login persists indefinitely
         localStorage.setItem('rd_user', JSON.stringify(userObj));
         
         document.getElementById('intro-scene').style.opacity = '0';
@@ -210,7 +225,7 @@ const Auth = {
         }, 800);
     },
     logout: () => { 
-        localStorage.removeItem('rd_user'); // Clears persistent login
+        localStorage.removeItem('rd_user'); 
         window.location.reload(); 
     },
     checkSession: () => { 
@@ -278,7 +293,9 @@ const Portal = {
         }
         
         OfflineSync.updateUI();
-        NotificationEngine.init(); // Initialize Live Engine
+        
+        // BOOT LIVE NOTIFICATION ENGINE
+        NotificationEngine.init();
     },
     switchTab: (tabId, element) => {
         document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
@@ -290,7 +307,6 @@ const Portal = {
         if(tabId === 'view-admin-dash' && leafletMap) setTimeout(() => leafletMap.invalidateSize(), 200);
         if(tabId === 'view-geo-mgmt') { GeoLogic.init(); }
     },
-    // NEW: Global Refresh Button Function
     refreshData: () => {
         if(!activeUser) return;
         const btn = document.getElementById('btnGlobalRefresh');
@@ -311,8 +327,8 @@ const Portal = {
         
         setTimeout(() => { 
             btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise" style="font-size:18px;"></i>'; 
-            UI.toast("Grid Re-Synchronized.", "success"); 
-        }, 800);
+            UI.toast("Grid Synchronized.", "success"); 
+        }, 600);
     }
 };
 
@@ -985,9 +1001,7 @@ const SurveyorLogic = {
     
     removeMember: (id) => { 
         const idInput = document.getElementById(`memId_${id}`);
-        if(idInput && idInput.value) {
-            SurveyorLogic.deletedMemberIds.push(idInput.value);
-        }
+        if(idInput && idInput.value) { SurveyorLogic.deletedMemberIds.push(idInput.value); }
         const row = document.getElementById(`memberRow_${id}`);
         if (row) row.remove();
         SurveyorLogic.checkO_Negative(); 
@@ -1068,10 +1082,7 @@ const SurveyorLogic = {
             let hof = members.find(m => m.relation_to_head === 'Head of Family');
             let others = members.filter(m => m.relation_to_head !== 'Head of Family');
             
-            if(!hof && members.length > 0) {
-                hof = members[0];
-                others = members.slice(1);
-            }
+            if(!hof && members.length > 0) { hof = members[0]; others = members.slice(1); }
 
             if(hof) SurveyorLogic.renderMemberRow('hof', hof, true);
             else SurveyorLogic.renderMemberRow('hof', {}, true);
@@ -1082,10 +1093,7 @@ const SurveyorLogic = {
 
             SurveyorLogic.checkO_Negative();
             UI.toast("Loaded record for: " + data.house_uid, "success");
-        } catch (e) {
-            console.error(e);
-            UI.toast("Failed to load household.", "error");
-        }
+        } catch (e) { console.error(e); UI.toast("Failed to load household.", "error"); }
     },
     
     fetchPreReg: async (idx) => {
@@ -1154,7 +1162,6 @@ const SurveyorLogic = {
         const lat = parseFloat(document.getElementById('hLat').value); 
         const lng = parseFloat(document.getElementById('hLng').value);
         
-        // Fix: Query only INSIDE the membersContainer to avoid parsing Revisit/Audit UI cards
         const memberCards = Array.from(document.querySelectorAll('#membersContainer .member-card'));
         
         const housePayload = { 
@@ -1223,7 +1230,6 @@ const SurveyorLogic = {
                 for(let m of membersPayload) {
                     m.household_id = hIdToUse;
                     if(m.id) {
-                        // Crucial Fix: Exclude member_uid from updates to avoid Postgres unique constraint error 23505
                         const { id, member_uid, ...updateFields } = m;
                         const { error: updErr } = await supabaseClient.from('family_members').update(updateFields).eq('id', id);
                         if (updErr) throw updErr;
